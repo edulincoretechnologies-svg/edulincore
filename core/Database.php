@@ -9,16 +9,7 @@ final class Database
 
     private function __construct()
     {
-        $basePath = defined('BASE_PATH') ? BASE_PATH : '/var/www/vhosts/iwnd-220.imbra/site1';
-        $configPath = $basePath . '/config/database.php';
-        
-        $config = [];
-        if (is_file($configPath)) {
-            $loadedConfig = require $configPath;
-            if (is_array($loadedConfig)) {
-                $config = $loadedConfig;
-            }
-        }
+        $config = self::loadConfig();
 
         $host = (string)($config['host'] ?? 'localhost');
         $port = (int)($config['port'] ?? 3306);
@@ -44,13 +35,33 @@ final class Database
             ]);
         } catch (PDOException $exception) {
             error_log('Database connection failed: ' . $exception->getMessage());
-            throw new RuntimeException('Database connection failed: ' . $exception->getMessage(), 0, $exception);
+            throw new RuntimeException(
+                'Database connection failed: ' . $exception->getMessage(),
+                0,
+                $exception
+            );
         }
+    }
+
+    private static function loadConfig(): array
+    {
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/var/www/vhosts/iwnd-220.imbra/site1';
+        $configPath = rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'database.php';
+
+        if (!is_file($configPath)) {
+            return [];
+        }
+
+        $loadedConfig = require $configPath;
+        return is_array($loadedConfig) ? $loadedConfig : [];
     }
 
     public static function getInstance(): self
     {
-        self::$instance ??= new self();
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+
         return self::$instance;
     }
 
